@@ -7,8 +7,9 @@ runbook never drift apart. Separate from
 change cadence, different blast radius than cluster infra.
 
 Empty scaffold as of M0. First real content lands with milestone **M3
-Observability** — see backlog issues #16–#19 in the `adamastorx` repo's
-`docs/roadmap/backlog.md`; runbooks and SLOs follow in **M4** (issues #20–#22).
+Observability** — see backlog issues #16–#20 in the `adamastorx` repo's
+`docs/roadmap/backlog.md`; SLOs, alerting, and runbooks follow in **M4**
+(issues #21–#23).
 
 ## Layout
 
