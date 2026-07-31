@@ -135,3 +135,66 @@ don't fix it in the same pass) — tracked as new backlog items:
   or whether a shorter `max.block.ms` / an explicit async error path
   (matching the "known gap" ADR 0012 already documented, just with the
   now-corrected understanding of what actually happens) is worth setting.
+
+## Postscript (2026-07-31, backlog #47): re-run under real sustained traffic
+
+Same fault, same method (`kubectl scale statefulset kafka-controller -n
+kafka --replicas=0`), the one real difference from the original run:
+`workload-generator` (#45) now drives continuous real traffic, so this
+time the question is falsifiable rather than reasoned-from-absence.
+
+```
+$ date -u
+Thu Jul 30 21:19:17 UTC 2026
+$ kubectl scale statefulset kafka-controller -n kafka --replicas=0
+```
+
+selfHeal reverted the pod even faster than the original run — already
+`1/1 Running` on the very first check, under a minute after the scale
+command. But Finding 2 from the original run (ephemeral storage wipes
+topics on every restart) turned that into a real, *ongoing* outage
+anyway: `api` kept throwing real `UnknownTopicOrPartitionException`s
+against the now-topicless broker for several more minutes, confirmed
+directly in its logs at `21:30:17Z`/`21:30:28Z`/`21:31:00Z` — the pod
+being "Ready" again did not mean the outage was over.
+
+**The alert fired, unaided, for the first time on a re-run of this
+scenario:**
+
+```
+$ curl localhost:9095/api/v2/alerts   # via in-cluster exec
+ApiHighErrorRate  startsAt=2026-07-30T21:28:01.292Z  state=active
+```
+
+Elapsed from fault injection to firing: **~8m44s** — a real, sustained
+non-zero error rate from continuous synthetic traffic hitting the
+missing-topic condition, no manually-generated burst needed this time.
+Real `ntfy.sh` push notification confirmed delivered for this firing
+(same topic as the original scenario's proof). The original explanation
+("traffic volume, not the rules, is why nothing fired") is now
+falsified in the direction it predicted: given real sustained traffic,
+the existing rule works exactly as designed.
+
+Recovery required the same manual topic re-creation as the original run
+(`kafka-topics.sh --create` for `work-items`, `work-items.DLT`,
+`clinvar.ingestion.completed`) — this time confirmed to be
+sufficient on its own, no pod restart needed; `api`/`workers` picked up
+the recreated topics on their next metadata refresh and produce/consume
+resumed within ~20s of topic creation.
+
+**Backlog #42 reassessed, as its own dependency on this item requires:**
+not closed, but downgraded. The finding that motivated it — "no alert
+catches a brief Kafka outage, only downstream error-rate inference that
+needs real traffic to trip" — is now half-obsolete: given #45's
+permanent real traffic, `ApiHighErrorRate` *does* catch this cluster's
+actual Kafka failure mode (broker restart → topic loss → sustained
+downstream errors) in a real, bounded ~9 minutes, with no new alert
+rule needed. What #42 would still catch that this doesn't: a Kafka
+outage that resolves *before* the topics are lost or before 5 minutes
+of elevated error rate accumulate (e.g. a broker restart under
+non-ephemeral storage, or a network partition shorter than this
+cluster's observed recovery time) — a scenario this cluster's own
+ephemeral-storage design doesn't currently produce, but a real
+broker/topic health alert would generalize to. Recorded as: valuable
+defense-in-depth, no longer the P1 gap-filler it was scoped as —
+downgraded to P2 in the backlog.
