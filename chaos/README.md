@@ -12,4 +12,4 @@ explicit confirmation before every fault injection.
 |---|---|---|
 | 1. Kafka broker unavailable | Done | [`01-kafka-broker-unavailable.md`](01-kafka-broker-unavailable.md) |
 | 2. PostgreSQL unavailable (PVC-full found untestable on this cluster) | Done | [`02-postgresql-unavailable.md`](02-postgresql-unavailable.md) |
-| 3. Consumer-group lag | Not started | — |
+| 3. Consumer-group lag | Done | [`03-consumer-lag.md`](03-consumer-lag.md) |
