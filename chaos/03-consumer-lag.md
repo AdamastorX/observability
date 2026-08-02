@@ -207,3 +207,74 @@ state, its return is part of what "recovered" looks like here).
   failure's root cause could not be retrieved this session. Not
   investigated further here (out of scope for this scenario); worth a
   human checking the next scheduled run's outcome.
+
+## Postscript (2026-08-02, backlog #75): the clean re-run, definitive answer
+
+Backlog #75's own AC asked for exactly this: repeat this scenario at
+the *unmodified* default `workload-generator` rate (`target_rps: 0.5`,
+not the 10x bump the original run used to make the lag threshold
+reachable in a reasonable window), watching Kafka's memory/restart
+count throughout, to isolate whether the original OOMKill (Finding 2
+above) was really triggered by the accumulating backlog or by the
+elevated test traffic alone.
+
+One real complication the original run didn't have to deal with:
+`workers` is now KEDA-autoscaled (backlog #63, merged after this
+scenario's first run) via a real `HorizontalPodAutoscaler` with
+`minReplicaCount: 1` — a live `kubectl scale --replicas=0` alone no
+longer produces a real outage, KEDA's own HPA reconciles it back to 1
+within seconds, the same shape of fight ArgoCD's `selfHeal` used to
+put up before the sync-pause fix. Closed the same way, plus one more
+step: `argocd/apps/workers.yaml`'s sync paused (the same real,
+git-committed method already proven for this exact need), **and**
+`kubectl annotate scaledobject workers -n workers
+autoscaling.keda.sh/paused="true"` to stop KEDA's own reconciliation
+too. Confirmed live: no pods, no HPA activity, before proceeding.
+
+```
+$ date -u
+Sun Aug  2 13:52:41 UTC 2026
+$ kubectl scale deployment workers -n workers --replicas=0
+```
+
+Real, sustained outage: **53 minutes**, at the real, unmodified
+default traffic rate, `workers` genuinely absent the whole time
+(confirmed: `WorkersConsumerMissing`, backlog #76, fired at 13:58:15,
+stayed firing continuously until recovery — itself a second, real
+confirmation of that alert working correctly under real conditions,
+not just the accelerated test that first proved it).
+
+**Kafka's own container restart count was polled every 20 seconds for
+the entire 53-minute window and never moved from `0`.** No OOM, no
+instability, no sign of memory pressure — on the same `1536Mi` limit
+(backlog #75's own earlier fix) that had already been raised once
+specifically because of this scenario's first, confounded run.
+
+**The real, definitive finding**: the OOMKill in this scenario's
+original run does **not** reproduce under a real, naturally-accumulating
+backlog at this project's actual traffic rate. The elevated (10x)
+`workload-generator` rate used to make that first run practical within
+a reasonable session window was the real trigger — not backlog size on
+its own, and not a genuine memory-headroom problem at this project's
+real operating rate. Backlog size alone, at real traffic, accumulates
+too slowly to threaten Kafka's memory even without the `768Mi→1536Mi`
+bump — recorded honestly rather than left as an assumed justification
+for a fix that turned out not to be strictly necessary at real-world
+scale (the bump itself is not reverted — it's still real, cheap
+headroom worth keeping regardless, per real node memory slack already
+documented in #75's own original entry).
+
+**Recovery, and a real bonus confirmation**: `workers` restored
+(`replicas=1`) and KEDA's pause lifted at `14:45:39 UTC`. KEDA
+immediately went `ACTIVE=true` and scaled to 3 replicas **on its own**,
+reacting to the real, naturally-accumulated 53-minute backlog with no
+manual burst needed this time — a real, independent confirmation of
+backlog #63's own scale-out finding, this time against organic lag
+rather than a deliberately-generated request burst. All 3 replicas
+confirmed consuming real work items live; drained and settled back
+toward `minReplicaCount: 1` afterward. `argocd/apps/workers.yaml`'s
+sync pause reverted via a real follow-up PR (platform#87), confirmed
+`Synced`/`Healthy` live.
+
+Backlog #75 closed for real on this finding — see its own updated
+entry in `adamastorx`'s backlog for the final status.
