@@ -5,9 +5,17 @@ One runbook per alert defined in `platform/argocd/apps/prometheus.yaml`'s
 project's alert rules live there as Prometheus's own static config, not as
 a separate `grafana/alerts/` artifact in this repo.
 
-Six alerts are live today, each with a runbook below covering what fired,
-what it means, first-response steps grounded in this project's own real
-incident history, and how to confirm resolution:
+This table's own count ("Six alerts are live today") went stale without
+anyone noticing — found live while adding backlog #90's four new
+runbooks (2026-08-07): `prometheus.yaml` actually carries 14 real alert
+rules today. Corrected below, and the real gap this drift hid is stated
+honestly rather than silently patched: **four existing alerts
+(`WorkersConsumerMissing`, `WatchlistDlqDepthHigh`, `MarketDataStaleFeed`,
+`ApiRateLimitRejectionsHigh`) have no runbook at all**, a direct
+violation of backlog #22's own "one runbook per alert" rule that this
+same drift let go unnoticed. Not fixed in the same PR that found it
+(scope discipline — #90's own AC only requires runbooks for #90's *new*
+alerts) — tracked as its own backlog item instead.
 
 | Alert | Severity | Runbook |
 |---|---|---|
@@ -15,14 +23,22 @@ incident history, and how to confirm resolution:
 | `ApiVariantsLookupHighErrorRate` | critical | [ApiVariantsLookupHighErrorRate.md](./ApiVariantsLookupHighErrorRate.md) |
 | `WorkersListenerErrorRate` | critical | [WorkersListenerErrorRate.md](./WorkersListenerErrorRate.md) |
 | `WorkersConsumerLagHigh` | warning | [WorkersConsumerLagHigh.md](./WorkersConsumerLagHigh.md) |
+| `WorkersConsumerMissing` | critical | **missing** — backlog item to be filed |
 | `ClinVarIngestionFreshnessBreach` | critical | [ClinVarIngestionFreshnessBreach.md](./ClinVarIngestionFreshnessBreach.md) |
 | `ClinVarIngestionDurationAnomaly` | warning | [ClinVarIngestionDurationAnomaly.md](./ClinVarIngestionDurationAnomaly.md) |
+| `WatchlistDlqDepthHigh` | warning | **missing** — backlog item to be filed |
+| `MarketDataStaleFeed` | warning | **missing** — backlog item to be filed |
+| `ApiRateLimitRejectionsHigh` | warning | **missing** — backlog item to be filed |
+| `AggregatorConsumerLagHigh` (backlog #90) | warning | [AggregatorConsumerLagHigh.md](./AggregatorConsumerLagHigh.md) |
+| `AggregatorConsumerMissing` (backlog #90) | critical | [AggregatorConsumerMissing.md](./AggregatorConsumerMissing.md) |
+| `SentimentAnalyzerConsumerLagHigh` (backlog #90) | warning | [SentimentAnalyzerConsumerLagHigh.md](./SentimentAnalyzerConsumerLagHigh.md) |
+| `SentimentAnalyzerConsumerMissing` (backlog #90) | critical | [SentimentAnalyzerConsumerMissing.md](./SentimentAnalyzerConsumerMissing.md) |
 
-A seventh rule, `GatewayHighErrorRate`, was written alongside these but is
-not a live alert: the `gateway` service it scraped was removed entirely in
-ADR 0021/backlog #S1's simplification pass, and the rule (and its scrape
-target) was removed from `prometheus.yaml` in the same cleanup. No runbook
-exists for it.
+A fifteenth rule, `GatewayHighErrorRate`, was written alongside these but
+is not a live alert: the `gateway` service it scraped was removed
+entirely in ADR 0021/backlog #S1's simplification pass, and the rule
+(and its scrape target) was removed from `prometheus.yaml` in the same
+cleanup. No runbook exists for it.
 
 Alerts route to a real notification channel (backlog #21c) — a webhook
 receiver pointed at a dedicated `ntfy.sh` topic, wired in Alertmanager's
