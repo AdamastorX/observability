@@ -7,9 +7,10 @@ a separate `grafana/alerts/` artifact in this repo.
 
 This table's own count ("Six alerts are live today") went stale without
 anyone noticing — found live while adding backlog #90's four new
-runbooks (2026-08-07): `prometheus.yaml` actually carries 16 real alert
+runbooks (2026-08-07): `prometheus.yaml` actually carries 17 real alert
 rules today (the 14 from that count, plus `NodeDiskSpaceLow`/
-`NodeDiskSpaceCritical`, backlog #92, added the same day). Corrected
+`NodeDiskSpaceCritical` from backlog #92 and `BlackboxProbeFailing`
+from backlog #93, both added the same day). Corrected
 below, and the real gap this drift hid is stated honestly rather than
 silently patched: **four existing alerts (`WorkersConsumerMissing`,
 `WatchlistDlqDepthHigh`, `MarketDataStaleFeed`, `ApiRateLimitRejectionsHigh`)
@@ -37,8 +38,9 @@ backlog #111.
 | `SentimentAnalyzerConsumerMissing` (backlog #90) | critical | [SentimentAnalyzerConsumerMissing.md](./SentimentAnalyzerConsumerMissing.md) |
 | `NodeDiskSpaceLow` (backlog #21d/#92) | warning | [NodeDiskSpaceLow.md](./NodeDiskSpaceLow.md) |
 | `NodeDiskSpaceCritical` (backlog #21d/#92) | critical | [NodeDiskSpaceCritical.md](./NodeDiskSpaceCritical.md) |
+| `BlackboxProbeFailing` (backlog #93) | critical | [BlackboxProbeFailing.md](./BlackboxProbeFailing.md) |
 
-A seventeenth rule, `GatewayHighErrorRate`, was written alongside these but
+An eighteenth rule, `GatewayHighErrorRate`, was written alongside these but
 is not a live alert: the `gateway` service it scraped was removed
 entirely in ADR 0021/backlog #S1's simplification pass, and the rule
 (and its scrape target) was removed from `prometheus.yaml` in the same
