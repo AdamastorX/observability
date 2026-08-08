@@ -11,14 +11,13 @@ runbooks (2026-08-07): `prometheus.yaml` carries 18 real alert rules
 today (the 14 from that original count, plus `NodeDiskSpaceLow`/
 `NodeDiskSpaceCritical` from backlog #92, `BlackboxProbeFailing` from
 backlog #93, and `AggregatorPriceFreshnessSlow` from backlog #91).
-Corrected below, and the real gap this drift hid is stated honestly rather than
-silently patched: **four existing alerts (`WorkersConsumerMissing`,
+The real gap this drift hid was stated honestly rather than silently
+patched at the time: four existing alerts (`WorkersConsumerMissing`,
 `WatchlistDlqDepthHigh`, `MarketDataStaleFeed`, `ApiRateLimitRejectionsHigh`)
-have no runbook at all**, a direct violation of backlog #22's own "one
-runbook per alert" rule that this same drift let go unnoticed. Not
-fixed in the same PR that found it (scope discipline — #90's own AC
-only requires runbooks for #90's *new* alerts) — tracked as adamastorx
-backlog #111.
+had no runbook at all — a direct violation of backlog #22's own "one
+runbook per alert" rule. Tracked separately as adamastorx backlog
+#111 and closed there (2026-08-08) — all four now have a real runbook
+below.
 
 | Alert | Severity | Runbook |
 |---|---|---|
@@ -26,12 +25,12 @@ backlog #111.
 | `ApiVariantsLookupHighErrorRate` | critical | [ApiVariantsLookupHighErrorRate.md](./ApiVariantsLookupHighErrorRate.md) |
 | `WorkersListenerErrorRate` | critical | [WorkersListenerErrorRate.md](./WorkersListenerErrorRate.md) |
 | `WorkersConsumerLagHigh` | warning | [WorkersConsumerLagHigh.md](./WorkersConsumerLagHigh.md) |
-| `WorkersConsumerMissing` | critical | **missing** — adamastorx backlog #111 |
+| `WorkersConsumerMissing` | critical | [WorkersConsumerMissing.md](./WorkersConsumerMissing.md) |
 | `ClinVarIngestionFreshnessBreach` | critical | [ClinVarIngestionFreshnessBreach.md](./ClinVarIngestionFreshnessBreach.md) |
 | `ClinVarIngestionDurationAnomaly` | warning | [ClinVarIngestionDurationAnomaly.md](./ClinVarIngestionDurationAnomaly.md) |
-| `WatchlistDlqDepthHigh` | warning | **missing** — adamastorx backlog #111 |
-| `MarketDataStaleFeed` | warning | **missing** — adamastorx backlog #111 |
-| `ApiRateLimitRejectionsHigh` | warning | **missing** — adamastorx backlog #111 |
+| `WatchlistDlqDepthHigh` | warning | [WatchlistDlqDepthHigh.md](./WatchlistDlqDepthHigh.md) |
+| `MarketDataStaleFeed` | warning | [MarketDataStaleFeed.md](./MarketDataStaleFeed.md) |
+| `ApiRateLimitRejectionsHigh` | warning | [ApiRateLimitRejectionsHigh.md](./ApiRateLimitRejectionsHigh.md) |
 | `AggregatorConsumerLagHigh` (backlog #90) | warning | [AggregatorConsumerLagHigh.md](./AggregatorConsumerLagHigh.md) |
 | `AggregatorConsumerMissing` (backlog #90) | critical | [AggregatorConsumerMissing.md](./AggregatorConsumerMissing.md) |
 | `SentimentAnalyzerConsumerLagHigh` (backlog #90) | warning | [SentimentAnalyzerConsumerLagHigh.md](./SentimentAnalyzerConsumerLagHigh.md) |
