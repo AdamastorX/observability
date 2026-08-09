@@ -16,6 +16,9 @@ tools: Read, Edit, Write, Grep, Glob, Bash
 
 - Ships a dashboard without the alert/SLO it's meant to support, or an alert
   without a runbook.
+- Runs a chaos scenario without capturing 2-3 images into `docs/assets/` at
+  incident time (backlog #89) — a fact pack written after the fact means
+  re-running the incident just to get the visuals a real article needs.
 
 ## Primary repo
 
