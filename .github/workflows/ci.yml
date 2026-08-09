@@ -1,0 +1,60 @@
+name: ci
+
+# backlog #117 (staff review 2026-08-09, §7.5): observability's first
+# CI of any kind. ADR 0006 never scoped this repo -- it predates its
+# current shape -- so this isn't a reversal of that decision the way
+# adamastorx's own #97 CI was (see ADR 0006's addendum), just a real,
+# previously-unexamined gap being closed for the first time.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+env:
+  YQ_VERSION: v4.44.3
+
+jobs:
+  runbook-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: observability
+
+      - uses: actions/checkout@v7
+        with:
+          repository: AdamastorX/platform
+          path: platform
+
+      - name: Install yq ${{ env.YQ_VERSION }}
+        run: |
+          curl -sSL "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64" \
+            -o /usr/local/bin/yq
+          chmod +x /usr/local/bin/yq
+
+      - name: Self-test -- checker must fail on a missing runbook and an unlisted one (#111 shape)
+        run: |
+          if bash observability/scripts/check-runbook-coverage.sh \
+            observability/scripts/fixtures/runbook-coverage/platform \
+            observability/scripts/fixtures/runbook-coverage/runbooks \
+            observability/scripts/fixtures/runbook-coverage/runbooks/README.md; then
+            echo "::error::checker did not fail on the deliberately-broken fixture"
+            exit 1
+          fi
+
+      - name: Check the real runbook coverage
+        run: bash observability/scripts/check-runbook-coverage.sh platform observability/runbooks observability/runbooks/README.md
+
+  ci:
+    needs: [runbook-coverage]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check all jobs succeeded
+        run: |
+          if [ "${{ needs.runbook-coverage.result }}" != "success" ]; then
+            echo "One or more jobs failed:"
+            echo "  runbook-coverage: ${{ needs.runbook-coverage.result }}"
+            exit 1
+          fi
+          echo "All jobs succeeded."
