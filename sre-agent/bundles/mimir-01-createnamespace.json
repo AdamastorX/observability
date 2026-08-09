@@ -1,0 +1,20 @@
+{
+  "incident_id": "mimir-01-createnamespace",
+  "component": "mimir",
+  "context": {
+    "deployment_shape": "New ArgoCD Application 'mimir', hand-written Kubernetes manifests (Deployment, Service, PVC, ResourceQuota, LimitRange, ConfigMap) under kubernetes/mimir/, syncPolicy.syncOptions includes CreateNamespace=true. This is the first-ever sync of this Application -- the 'mimir' namespace does not exist yet on the cluster.",
+    "trigger_command": "kubectl patch application mimir -n argocd --type merge -p '{\"operation\":{\"sync\":{}}}'"
+  },
+  "symptom": {
+    "observed_behavior": "The sync operation ran and completed, but every single resource failed to apply.",
+    "real_output": "operationState: {\"finishedAt\": \"2026-08-08T22:53:17Z\", \"message\": \"one or more objects failed to apply, reason: namespaces \\\"mimir\\\" not found\", \"operation\": {\"initiatedBy\": {}, \"retry\": {}, \"sync\": {}}, \"phase\": \"Failed\", \"startedAt\": \"2026-08-08T22:53:14Z\", \"syncResult\": {\"resources\": [{\"kind\": \"ResourceQuota\", \"message\": \"namespaces \\\"mimir\\\" not found\", \"name\": \"namespace-quota\", \"status\": \"SyncFailed\"}, {\"kind\": \"LimitRange\", \"message\": \"namespaces \\\"mimir\\\" not found\", \"name\": \"default-cpu-limit\", \"status\": \"SyncFailed\"}, {\"kind\": \"ConfigMap\", \"message\": \"namespaces \\\"mimir\\\" not found\", \"name\": \"mimir-config\", \"status\": \"SyncFailed\"}, {\"kind\": \"PersistentVolumeClaim\", \"message\": \"namespaces \\\"mimir\\\" not found\", \"name\": \"mimir-data\", \"status\": \"SyncFailed\"}, {\"kind\": \"Service\", \"message\": \"namespaces \\\"mimir\\\" not found\", \"name\": \"mimir\", \"status\": \"SyncFailed\"}, {\"kind\": \"Deployment\", \"message\": \"namespaces \\\"mimir\\\" not found\", \"name\": \"mimir\", \"status\": \"SyncFailed\"}]}}",
+    "kubectl_get_application_sync_status": "OutOfSync",
+    "kubectl_get_pods_mimir_namespace": "No resources found in mimir namespace."
+  },
+  "note_to_agent": "The Application's own spec.syncPolicy.syncOptions genuinely includes 'CreateNamespace=true'. Diagnose why the sync failed anyway, and what you'd do next.",
+  "reference_answer": {
+    "root_cause": "Triggering a sync via a raw `kubectl patch application --type merge -p '{\"operation\":{\"sync\":{}}}'` does not populate the operation's own syncOptions from the Application's spec -- the operation object created was a bare empty sync ({}), which does not carry CreateNamespace=true forward from spec.syncPolicy.syncOptions the way a normal `argocd app sync` CLI/UI-triggered sync would. ArgoCD's own reconciler only creates the namespace as part of a sync operation that actually carries that option.",
+    "fix_applied": "Manually ran `kubectl create namespace mimir`, then re-triggered the same sync patch. All resources applied successfully on the retry since the namespace now existed independent of the sync operation's own options.",
+    "verification": "kubectl get pods -n mimir showed a real pod scheduled and starting after the fix."
+  }
+}

@@ -45,16 +45,37 @@ jobs:
       - name: Check the real runbook coverage
         run: bash observability/scripts/check-runbook-coverage.sh platform observability/runbooks observability/runbooks/README.md
 
+  # backlog #66/ADR 0039: no network call, no API key needed -- proves
+  # every bundle is well-formed and that reference_answer (the real
+  # answer) never leaks into what actually gets sent to the model, the
+  # harness's entire integrity guarantee.
+  sre-agent-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: pip install -r sre-agent/requirements.txt
+
+      - name: Run structural tests
+        run: python3 sre-agent/test_harness.py
+
   ci:
-    needs: [runbook-coverage]
+    needs: [runbook-coverage, sre-agent-tests]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Check all jobs succeeded
         run: |
-          if [ "${{ needs.runbook-coverage.result }}" != "success" ]; then
+          if [ "${{ needs.runbook-coverage.result }}" != "success" ] \
+            || [ "${{ needs.sre-agent-tests.result }}" != "success" ]; then
             echo "One or more jobs failed:"
             echo "  runbook-coverage: ${{ needs.runbook-coverage.result }}"
+            echo "  sre-agent-tests: ${{ needs.sre-agent-tests.result }}"
             exit 1
           fi
           echo "All jobs succeeded."
