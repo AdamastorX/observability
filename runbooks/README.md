@@ -7,10 +7,14 @@ a separate `grafana/alerts/` artifact in this repo.
 
 This table's own count ("Six alerts are live today") went stale without
 anyone noticing — found live while adding backlog #90's four new
-runbooks (2026-08-07): `prometheus.yaml` carries 18 real alert rules
-today (the 14 from that original count, plus `NodeDiskSpaceLow`/
+runbooks (2026-08-07): `prometheus.yaml` carried 18 real alert rules
+at that point (the 14 from that original count, plus `NodeDiskSpaceLow`/
 `NodeDiskSpaceCritical` from backlog #92, `BlackboxProbeFailing` from
 backlog #93, and `AggregatorPriceFreshnessSlow` from backlog #91).
+19 as of backlog #118 (`ArgoCDAppOutOfSync`). This specific count is no
+longer the thing to trust, though -- #117's own CI job checks this
+table against the real live alert set on every PR, so a stale number
+here fails the build rather than sitting unnoticed.
 The real gap this drift hid was stated honestly rather than silently
 patched at the time: four existing alerts (`WorkersConsumerMissing`,
 `WatchlistDlqDepthHigh`, `MarketDataStaleFeed`, `ApiRateLimitRejectionsHigh`)
@@ -39,6 +43,7 @@ below.
 | `NodeDiskSpaceCritical` (backlog #21d/#92) | critical | [NodeDiskSpaceCritical.md](./NodeDiskSpaceCritical.md) |
 | `BlackboxProbeFailing` (backlog #93) | critical | [BlackboxProbeFailing.md](./BlackboxProbeFailing.md) |
 | `AggregatorPriceFreshnessSlow` (backlog #91) | warning | [AggregatorPriceFreshnessSlow.md](./AggregatorPriceFreshnessSlow.md) |
+| `ArgoCDAppOutOfSync` (backlog #118) | warning | [ArgoCDAppOutOfSync.md](./ArgoCDAppOutOfSync.md) |
 
 A nineteenth rule, `GatewayHighErrorRate`, was written alongside these but
 is not a live alert: the `gateway` service it scraped was removed
