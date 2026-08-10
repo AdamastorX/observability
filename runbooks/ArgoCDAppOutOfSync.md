@@ -6,7 +6,7 @@ Source rule: `platform/argocd/apps/prometheus.yaml`
 ## What fired
 
 ```
-argocd_app_info{sync_status!="Synced", name!~"clinvar-postgresql|grafana|kafka|postgresql|redis"}
+argocd_app_info{sync_status!="Synced", name!~"clinvar-postgresql|grafana|kafka|postgresql|redis|cilium"}
 ```
 
 `for: 2h`, `severity: warning`.
@@ -19,19 +19,31 @@ running, for longer than any ordinary in-progress sync would ever
 take.
 
 **The name exclusion is deliberate and load-bearing, not an
-afterthought.** Five real Applications
-(`clinvar-postgresql`/`grafana`/`kafka`/`postgresql`/`redis`) are
-essentially always `OutOfSync` on this cluster, for a known, accepted
-reason: their Bitnami-chart-managed Secret gets a fresh checksum
-annotation on every render, which ArgoCD's diff engine treats as real
-drift even though the actual credential value never changes. A general
-alert on this metric with no exclusion list would fire on those five
-permanently, from the moment it shipped — exactly the kind of
-always-firing alert that trains a human to ignore the channel. If a
-sixth Application starts showing this same benign pattern, add its
-name to the exclusion regex here **and** in
-`platform/argocd/apps/prometheus.yaml`'s own rule — don't just
-silence the page without updating both.
+afterthought.** Six real Applications are essentially always
+`OutOfSync` on this cluster, each for a known, accepted, *different*
+reason — not one pattern repeated six times:
+
+- `clinvar-postgresql`/`grafana`/`kafka`/`postgresql`/`redis`: their
+  Bitnami-chart-managed Secret gets a fresh checksum annotation on
+  every render, which ArgoCD's diff engine treats as real drift even
+  though the actual credential value never changes.
+- `cilium` (added 2026-08-10, backlog #49): the chart auto-generates
+  fresh Hubble mTLS certs (the `cilium-ca`/`hubble-relay-client-certs`
+  Secrets) on every `helm template`/`helm install` run, so they never
+  byte-match git's rendered copy — a different mechanism than the
+  Bitnami checksum case, same real effect (permanently `OutOfSync`,
+  nothing actually wrong).
+
+A general alert on this metric with no exclusion list would fire on
+those six permanently, from the moment it shipped — exactly the kind
+of always-firing alert that trains a human to ignore the channel. If a
+seventh Application starts showing this same benign pattern (regenerated
+Secret content that only ever changes because it was generated fresh,
+not because something's actually different), add its name to the
+exclusion regex here **and** in `platform/argocd/apps/prometheus.yaml`'s
+own rule — don't just silence the page without updating both, and don't
+assume it's automatically the same root cause as either case above
+without checking the real diff first (step 1 below).
 
 ## What it means in practice
 
