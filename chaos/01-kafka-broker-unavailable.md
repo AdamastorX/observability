@@ -198,3 +198,63 @@ ephemeral-storage design doesn't currently produce, but a real
 broker/topic health alert would generalize to. Recorded as: valuable
 defense-in-depth, no longer the P1 gap-filler it was scoped as —
 downgraded to P2 in the backlog.
+
+## Postscript (2026-08-15, platform#178): the AC's own alert built, and re-run live to verify it
+
+`KafkaBrokerUnavailable` (a real `blackbox-kafka-tcp` TCP-connect probe
+against the broker Service, `for: 2m`, independent of `api`/`workers`
+traffic entirely — the direct answer to this scenario's "no existing
+alert fired" gap) shipped in platform#178. Re-ran this same fault
+injection to verify it live, exactly as #42's own AC requires:
+
+```
+$ date -u
+Sat Aug 15 08:47:18 UTC 2026
+$ kubectl scale statefulset kafka-controller -n kafka --replicas=0
+```
+
+**Two real, different findings from this run than either prior one:**
+
+1. **Recovery is now fully automatic, not just pod-level.** selfHeal
+   reverted the replica count in under 20s (even faster than either
+   prior run), and — unlike both 2026-07-26 and 2026-07-31, which
+   needed a manual `kafka-topics.sh --create` — a `kafka-provisioning`
+   Job ran on its own and recreated every real topic
+   (`work-items`, `clinvar.ingestion.completed`, `stock.price.tick`,
+   `news.sentiment.scored`, `news.article.published`, plus aggregator's
+   four changelog topics) with zero manual intervention. Proven end to
+   end, not assumed: a real `POST /work-items` at `08:50:xx` returned
+   `202`, and Loki confirms `workers` (KEDA-scaled 0→1 for the occasion)
+   actually consumed it — `Consumed work item id=ca1dd6a6-...` at
+   `08:51:20.938Z`. This project's own ephemeral-Kafka provisioning
+   story has quietly gotten more resilient since the original scenario
+   was written, not just faster.
+
+2. **The alert did not fire — and the real cause is the scrape
+   interval, not just the `for:` value.** Queried the raw
+   `probe_success{job="blackbox-kafka-tcp"}` series directly from
+   Prometheus rather than assuming: real downtime was `08:47:50` to
+   `08:48:45`, **~55 seconds**, comfortably under the alert's `for: 2m`.
+   Checked *why* a shorter `for:` alone wouldn't reliably fix this:
+   `/api/v1/targets` confirms this job's real `scrapeInterval` is
+   **1 minute** — a 55s outage can land inside a single scrape gap and
+   produce at most one real `0` sample, which cannot sustain any `for:`
+   duration longer than roughly one evaluation cycle. This is a real,
+   structural detection-resolution limit (scrape cadence vs. recovery
+   speed), not a threshold-tuning miss.
+   **Decision recorded, not left as an open gap**: given (a) this
+   cluster's real self-heal now resolves *and* re-provisions faster
+   than a human could act on a page anyway, and (b) `ApiHighErrorRate`
+   already covers the slower, worse failure shape (topics genuinely
+   lost, sustained error rate) per the 2026-07-31 postscript above,
+   paging on a sub-minute blip that resolves itself is not worth
+   tightening the scrape interval for — accepted as-is, matching this
+   project's own stated "no framework for a problem you don't have yet"
+   discipline. `KafkaBrokerUnavailable` stays exactly as configured: it
+   would still catch a real outage lasting longer than ~2-3 real scrape
+   intervals, which is its actual, intended job.
+
+**Backlog #42 marked Done (2026-08-15)** — the AC's own alert exists,
+is independent of `api`/`workers` traffic, and has now been verified
+live against a real repeated chaos scenario 1, with the real result
+(and the decision it prompted) recorded honestly rather than assumed.
