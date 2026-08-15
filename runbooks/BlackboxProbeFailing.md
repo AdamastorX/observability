@@ -6,7 +6,7 @@ Source rule: `platform/argocd/apps/prometheus.yaml`
 ## What fired
 
 ```
-probe_success{job=~"blackbox-.*"} == 0
+probe_success{job=~"blackbox-.*", job!="blackbox-kafka-tcp"} == 0
 ```
 
 `for: 5m`, `severity: critical`.
@@ -21,6 +21,11 @@ Three jobs share this one alert (`blackbox-http-2xx`,
 `blackbox-http-2xx-auth`, `blackbox-http-401-expected`) — the failing
 one, and the exact URL, are both real labels on the firing series
 (`job`, `instance`), not something to guess from the alert name alone.
+`blackbox-kafka-tcp` (backlog #42) uses the same `blackbox-exporter`
+and the same `probe_success` signal but is deliberately excluded here
+and gets its own alert, [`KafkaBrokerUnavailable`](KafkaBrokerUnavailable.md)
+— an unreachable Kafka broker needs materially different investigative
+guidance than a public HTTP endpoint does, not this runbook's steps.
 
 ## What it means in practice
 
