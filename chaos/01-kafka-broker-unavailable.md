@@ -233,11 +233,15 @@ $ kubectl scale statefulset kafka-controller -n kafka --replicas=0
 2. **The alert did not fire — and the real cause is the scrape
    interval, not just the `for:` value.** Queried the raw
    `probe_success{job="blackbox-kafka-tcp"}` series directly from
-   Prometheus rather than assuming: real downtime was `08:47:50` to
-   `08:48:45`, **~55 seconds**, comfortably under the alert's `for: 2m`.
-   Checked *why* a shorter `for:` alone wouldn't reliably fix this:
-   `/api/v1/targets` confirms this job's real `scrapeInterval` is
-   **1 minute** — a 55s outage can land inside a single scrape gap and
+   Prometheus rather than assuming: the last confirmed-`1` sample before
+   the flip and the first confirmed-`1` sample after bound the real
+   downtime at `08:47:50` to `08:48:50`, **~60 seconds** — an honest
+   bound, not a precise duration: `/api/v1/targets` confirms this job's
+   real `scrapeInterval` is **1 minute**, so the query's 5s step is
+   interpolating a single real ~60s-cadence sample, not true 5s
+   resolution. Comfortably under the alert's `for: 2m` either way.
+   Checked *why* a shorter `for:` alone wouldn't reliably fix this: a
+   sub-scrape-interval outage can land inside a single scrape gap and
    produce at most one real `0` sample, which cannot sustain any `for:`
    duration longer than roughly one evaluation cycle. This is a real,
    structural detection-resolution limit (scrape cadence vs. recovery
@@ -254,7 +258,13 @@ $ kubectl scale statefulset kafka-controller -n kafka --replicas=0
    would still catch a real outage lasting longer than ~2-3 real scrape
    intervals, which is its actual, intended job.
 
-**Backlog #42 marked Done (2026-08-15)** — the AC's own alert exists,
-is independent of `api`/`workers` traffic, and has now been verified
-live against a real repeated chaos scenario 1, with the real result
-(and the decision it prompted) recorded honestly rather than assumed.
+**Backlog #42 marked Done, with the gap named in the label itself
+(2026-08-15)** — deliberately not a bare "Done": the AC's literal text
+asked for the alert to *fire* on a real outage, and this live run's
+actual result is that it did not, for the only real outage shape this
+cluster currently produces. What *is* fully satisfied: the alert
+exists, is independent of `api`/`workers` traffic, and was verified
+live against a real repeated chaos scenario 1 rather than assumed to
+work. The "reasonable window" the AC left unstated is resolved here,
+after the fact, by the decision above — not redefined quietly. See
+backlog.md's own #42 entry for the exact wording used there.
