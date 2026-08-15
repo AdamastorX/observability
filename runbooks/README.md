@@ -44,6 +44,7 @@ below.
 | `BlackboxProbeFailing` (backlog #93) | critical | [BlackboxProbeFailing.md](./BlackboxProbeFailing.md) |
 | `AggregatorPriceFreshnessSlow` (backlog #91) | warning | [AggregatorPriceFreshnessSlow.md](./AggregatorPriceFreshnessSlow.md) |
 | `ArgoCDAppOutOfSync` (backlog #118) | warning | [ArgoCDAppOutOfSync.md](./ArgoCDAppOutOfSync.md) |
+| `KafkaBrokerUnavailable` (backlog #42) | critical | [KafkaBrokerUnavailable.md](./KafkaBrokerUnavailable.md) |
 
 A nineteenth rule, `GatewayHighErrorRate`, was written alongside these but
 is not a live alert: the `gateway` service it scraped was removed
