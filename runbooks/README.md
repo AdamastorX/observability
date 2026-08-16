@@ -45,6 +45,7 @@ below.
 | `AggregatorPriceFreshnessSlow` (backlog #91) | warning | [AggregatorPriceFreshnessSlow.md](./AggregatorPriceFreshnessSlow.md) |
 | `ArgoCDAppOutOfSync` (backlog #118) | warning | [ArgoCDAppOutOfSync.md](./ArgoCDAppOutOfSync.md) |
 | `KafkaBrokerUnavailable` (backlog #42) | critical | [KafkaBrokerUnavailable.md](./KafkaBrokerUnavailable.md) |
+| `RootCARotated` (backlog #139) | critical | [RootCARotated.md](./RootCARotated.md) |
 
 A nineteenth rule, `GatewayHighErrorRate`, was written alongside these but
 is not a live alert: the `gateway` service it scraped was removed
