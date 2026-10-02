@@ -5,9 +5,23 @@ One runbook per alert defined in `platform/argocd/apps/prometheus.yaml`'s
 project's alert rules live there as Prometheus's own static config, not as
 a separate `grafana/alerts/` artifact in this repo.
 
-Six alerts are live today, each with a runbook below covering what fired,
-what it means, first-response steps grounded in this project's own real
-incident history, and how to confirm resolution:
+This table's own count ("Six alerts are live today") went stale without
+anyone noticing — found live while adding backlog #90's four new
+runbooks (2026-08-07): `prometheus.yaml` carried 18 real alert rules
+at that point (the 14 from that original count, plus `NodeDiskSpaceLow`/
+`NodeDiskSpaceCritical` from backlog #92, `BlackboxProbeFailing` from
+backlog #93, and `AggregatorPriceFreshnessSlow` from backlog #91).
+19 as of backlog #118 (`ArgoCDAppOutOfSync`). This specific count is no
+longer the thing to trust, though -- #117's own CI job checks this
+table against the real live alert set on every PR, so a stale number
+here fails the build rather than sitting unnoticed.
+The real gap this drift hid was stated honestly rather than silently
+patched at the time: four existing alerts (`WorkersConsumerMissing`,
+`WatchlistDlqDepthHigh`, `MarketDataStaleFeed`, `ApiRateLimitRejectionsHigh`)
+had no runbook at all — a direct violation of backlog #22's own "one
+runbook per alert" rule. Tracked separately as adamastorx backlog
+#111 and closed there (2026-08-08) — all four now have a real runbook
+below.
 
 | Alert | Severity | Runbook |
 |---|---|---|
@@ -15,14 +29,31 @@ incident history, and how to confirm resolution:
 | `ApiVariantsLookupHighErrorRate` | critical | [ApiVariantsLookupHighErrorRate.md](./ApiVariantsLookupHighErrorRate.md) |
 | `WorkersListenerErrorRate` | critical | [WorkersListenerErrorRate.md](./WorkersListenerErrorRate.md) |
 | `WorkersConsumerLagHigh` | warning | [WorkersConsumerLagHigh.md](./WorkersConsumerLagHigh.md) |
+| `WorkersConsumerMissing` | critical | [WorkersConsumerMissing.md](./WorkersConsumerMissing.md) |
 | `ClinVarIngestionFreshnessBreach` | critical | [ClinVarIngestionFreshnessBreach.md](./ClinVarIngestionFreshnessBreach.md) |
 | `ClinVarIngestionDurationAnomaly` | warning | [ClinVarIngestionDurationAnomaly.md](./ClinVarIngestionDurationAnomaly.md) |
+| `WatchlistDlqDepthHigh` | warning | [WatchlistDlqDepthHigh.md](./WatchlistDlqDepthHigh.md) |
+| `MarketDataStaleFeed` | warning | [MarketDataStaleFeed.md](./MarketDataStaleFeed.md) |
+| `ApiRateLimitRejectionsHigh` | warning | [ApiRateLimitRejectionsHigh.md](./ApiRateLimitRejectionsHigh.md) |
+| `AggregatorConsumerLagHigh` (backlog #90) | warning | [AggregatorConsumerLagHigh.md](./AggregatorConsumerLagHigh.md) |
+| `AggregatorConsumerMissing` (backlog #90) | critical | [AggregatorConsumerMissing.md](./AggregatorConsumerMissing.md) |
+| `SentimentAnalyzerConsumerLagHigh` (backlog #90) | warning | [SentimentAnalyzerConsumerLagHigh.md](./SentimentAnalyzerConsumerLagHigh.md) |
+| `SentimentAnalyzerConsumerMissing` (backlog #90) | critical | [SentimentAnalyzerConsumerMissing.md](./SentimentAnalyzerConsumerMissing.md) |
+| `NodeDiskSpaceLow` (backlog #21d/#92) | warning | [NodeDiskSpaceLow.md](./NodeDiskSpaceLow.md) |
+| `NodeDiskSpaceCritical` (backlog #21d/#92) | critical | [NodeDiskSpaceCritical.md](./NodeDiskSpaceCritical.md) |
+| `BlackboxProbeFailing` (backlog #93) | critical | [BlackboxProbeFailing.md](./BlackboxProbeFailing.md) |
+| `AggregatorPriceFreshnessSlow` (backlog #91) | warning | [AggregatorPriceFreshnessSlow.md](./AggregatorPriceFreshnessSlow.md) |
+| `ArgoCDAppOutOfSync` (backlog #118) | warning | [ArgoCDAppOutOfSync.md](./ArgoCDAppOutOfSync.md) |
+| `KafkaBrokerUnavailable` (backlog #42) | critical | [KafkaBrokerUnavailable.md](./KafkaBrokerUnavailable.md) |
+| `RootCARotated` (backlog #139) | critical | [RootCARotated.md](./RootCARotated.md) |
+| `WorkloadRestartingFrequently` (backlog #125) | warning | [WorkloadRestartingFrequently.md](./WorkloadRestartingFrequently.md) |
+| `ContainerCrashLoopOrOOMKilled` (backlog #125) | critical | [ContainerCrashLoopOrOOMKilled.md](./ContainerCrashLoopOrOOMKilled.md) |
 
-A seventh rule, `GatewayHighErrorRate`, was written alongside these but is
-not a live alert: the `gateway` service it scraped was removed entirely in
-ADR 0021/backlog #S1's simplification pass, and the rule (and its scrape
-target) was removed from `prometheus.yaml` in the same cleanup. No runbook
-exists for it.
+A nineteenth rule, `GatewayHighErrorRate`, was written alongside these but
+is not a live alert: the `gateway` service it scraped was removed
+entirely in ADR 0021/backlog #S1's simplification pass, and the rule
+(and its scrape target) was removed from `prometheus.yaml` in the same
+cleanup. No runbook exists for it.
 
 Alerts route to a real notification channel (backlog #21c) — a webhook
 receiver pointed at a dedicated `ntfy.sh` topic, wired in Alertmanager's

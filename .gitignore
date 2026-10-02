@@ -4,3 +4,5 @@
 .vscode/
 .claude/worktrees/
 .claude/ralph-loop.local.md
+__pycache__/
+*.pyc

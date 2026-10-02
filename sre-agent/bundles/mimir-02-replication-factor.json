@@ -1,0 +1,22 @@
+{
+  "incident_id": "mimir-02-replication-factor",
+  "component": "mimir",
+  "context": {
+    "deployment_shape": "Mimir 3.1.2, monolithic mode (target: all,alertmanager), single replica (replicas: 1), filesystem blocks-storage backend. Prometheus configured with remote_write pointed at this Mimir instance.",
+    "pod_status": "mimir-fdcgp 1/1 Running, 0 restarts, stable for 72s+. Readiness probe (GET /ready) passing."
+  },
+  "symptom": {
+    "observed_behavior": "The pod is healthy and ready by every Kubernetes-visible signal, but real Prometheus remote_write requests against it are failing.",
+    "real_log_lines": [
+      "level=error user=anonymous msg=\"detected an error while ingesting Prometheus remote-write request (the request may have been partially ingested)\" httpCode=500 err=\"send data to ingesters: at least 2 live replicas required, could only find 1\"",
+      "level=warn msg=\"POST /api/v1/push (500) 11.038563ms Response: \\\"send data to ingesters: at least 2 live replicas required, could only find 1\\n\\\"\""
+    ],
+    "real_query_result": "curl -s 'http://mimir:8080/prometheus/api/v1/query?query=up' returns {\"status\":\"success\",\"data\":{\"resultType\":\"vector\",\"result\":[]}} -- zero series, nothing has been successfully ingested."
+  },
+  "note_to_agent": "The pod's own readiness/liveness signals are all green. Diagnose the real cause of the write-path failures and what you'd change.",
+  "reference_answer": {
+    "root_cause": "Mimir's ingester ring defaults to replication_factor: 3 (confirmed via the real binary's own -help-all: '-ingester.ring.replication-factor int ... (default 3)') -- this default is unconditional, it does not automatically drop to 1 just because the deployment is monolithic/single-replica. A single-replica Deployment can structurally never satisfy 'at least 2 live replicas required' on the write path, regardless of how healthy the one replica is -- this is a write-path (distributor/ingester) failure entirely orthogonal to the HTTP readiness probe, which only checks that the process is up, not that its own internal replication requirement is satisfiable.",
+    "fix_applied": "Set ingester.ring.replication_factor: 1 explicitly in the Mimir config (the only value a genuine single-replica deployment can ever satisfy), redeployed.",
+    "verification": "Confirmed locally first with the real mimir binary before deploying: a test push that previously failed with the replica-count error stopped being rejected for that reason once the config was set to 1."
+  }
+}

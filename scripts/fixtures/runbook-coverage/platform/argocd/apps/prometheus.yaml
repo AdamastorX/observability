@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: prometheus
+spec:
+  source:
+    helm:
+      valuesObject:
+        serverFiles:
+          alerting_rules.yml:
+            groups:
+              - name: fixture
+                rules:
+                  - alert: HasRunbookAndListed
+                    expr: up == 0
+                  - alert: MissingRunbookEntirely
+                    expr: up == 0
+                  - alert: HasRunbookNotListedInReadme
+                    expr: up == 0

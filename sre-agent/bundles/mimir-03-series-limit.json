@@ -1,0 +1,23 @@
+{
+  "incident_id": "mimir-03-series-limit",
+  "component": "mimir",
+  "context": {
+    "deployment_shape": "Mimir 3.1.2, monolithic mode, single replica, ingester.ring.replication_factor already set to 1 (the fix from the previous incident in this series is already applied and confirmed working -- the 'at least 2 live replicas required' error is gone).",
+    "cluster_scale": "This is a single-node home-lab Kubernetes cluster with a modest but real set of scraped services (roughly 20 real Prometheus scrape jobs across application services, infra components, and an eBPF auto-instrumentation DaemonSet with high label cardinality)."
+  },
+  "symptom": {
+    "observed_behavior": "Most real Prometheus remote_write requests are still being rejected, with a different error than before.",
+    "real_log_lines": [
+      "level=warn method=/cortex.Ingester/Push duration=5.308129ms msg=gRPC err=\"user=anonymous: per-user series limit of 150000 exceeded (err-mimir-max-series-per-user). To adjust the related per-tenant limit, configure -ingester.max-global-series-per-user, or contact your service administrator. (sampled 1/10)\"",
+      "level=error user=anonymous msg=\"detected an error while ingesting Prometheus remote-write request (the request may have been partially ingested)\" httpCode=400 err=\"send data to ingesters: failed pushing to ingester mimir-74b8b445bc-xnj7h: user=anonymous: per-user series limit of 150000 exceeded (err-mimir-max-series-per-user)...\""
+    ],
+    "real_query_result": "curl -s 'http://<real-prometheus>:9090/api/v1/query?query=prometheus_tsdb_head_series' returns a real current value of approximately 186604 active series on this cluster's own Prometheus."
+  },
+  "note_to_agent": "The replica-count problem from before is confirmed fixed and is not the cause here -- this is a different, new error message. Diagnose the real cause and what you'd change.",
+  "reference_answer": {
+    "root_cause": "Mimir's ingester.max-global-series-per-user defaults to 150000 (per-tenant, real default confirmed via the binary's own -help-all output). This cluster's real, measured active series count (prometheus_tsdb_head_series ~186,604) is already above that default cap before Mimir even started deduplicating/ingesting anything of its own -- the default limit was simply undersized for this cluster's real cardinality, not a bug in Mimir or in the deployment shape.",
+    "fix_applied": "Set limits.max_global_series_per_user: 300000 in the Mimir config -- real headroom above the measured 186,604 figure, not an arbitrarily large number.",
+    "verification": "After redeploying with the raised limit, real remote_write pushes stopped being rejected for the series-limit reason, and a real query for up{job=\"beyla\"} (and other real jobs) through Mimir's own /prometheus-prefixed query API returned real, current data end to end.",
+    "related_but_deliberately_unfixed_finding": "A separate, smaller issue was found at the same time and deliberately left unfixed, not silently patched: some series from an OTel Collector's own self-monitoring metrics carry a label literally named 'server.address' (a raw OpenTelemetry semantic-convention attribute name, containing a dot) -- valid enough for Prometheus's own local TSDB to accept without complaint, but rejected by Mimir's own stricter remote-write label-name validation (err-mimir-label-invalid). This is real, deliberate, documented evidence that Mimir's ingest path enforces stricter rules than plain Prometheus at this project's real scale -- not something a fully-correct diagnosis needs to fix, but a strong answer should at least be able to distinguish it from the series-limit issue if given both symptoms together."
+  }
+}
