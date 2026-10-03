@@ -48,6 +48,7 @@ below.
 | `RootCARotated` (backlog #139) | critical | [RootCARotated.md](./RootCARotated.md) |
 | `WorkloadRestartingFrequently` (backlog #125) | warning | [WorkloadRestartingFrequently.md](./WorkloadRestartingFrequently.md) |
 | `ContainerCrashLoopOrOOMKilled` (backlog #125) | critical | [ContainerCrashLoopOrOOMKilled.md](./ContainerCrashLoopOrOOMKilled.md) |
+| `TelemetryBackendDown` (backlog #144) | warning | [TelemetryBackendDown.md](./TelemetryBackendDown.md) |
 
 A nineteenth rule, `GatewayHighErrorRate`, was written alongside these but
 is not a live alert: the `gateway` service it scraped was removed
@@ -64,3 +65,11 @@ faster `group_wait`/`repeat_interval` than `warning`-severity ones.
 names it) has no runbook yet because it hasn't shipped — the underlying
 metric has no status/outcome label to alert against (tracked as backlog
 #21e). No runbook is written ahead of an alert that doesn't exist yet.
+
+`TelemetryBackendDown` (backlog #144, ADR 0044 section 3) deliberately covers
+only Loki/Tempo/Pyroscope, not Mimir — backlog #135 (Mimir decommission
+trigger) is still an open owner decision, and a Prometheus-to-Mimir
+remote-write-failure alert is a different signal shape than a
+scrape-target-down one. If Mimir is kept, its own alert/runbook ships
+separately once #135 resolves; not folded into this one ahead of that
+decision.
