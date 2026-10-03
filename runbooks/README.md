@@ -32,6 +32,7 @@ below.
 | `WorkersConsumerMissing` | critical | [WorkersConsumerMissing.md](./WorkersConsumerMissing.md) |
 | `ClinVarIngestionFreshnessBreach` | critical | [ClinVarIngestionFreshnessBreach.md](./ClinVarIngestionFreshnessBreach.md) |
 | `ClinVarIngestionDurationAnomaly` | warning | [ClinVarIngestionDurationAnomaly.md](./ClinVarIngestionDurationAnomaly.md) |
+| `ClinVarInvalidationLag` (backlog #29) | critical | [ClinVarInvalidationLag.md](./ClinVarInvalidationLag.md) |
 | `WatchlistDlqDepthHigh` | warning | [WatchlistDlqDepthHigh.md](./WatchlistDlqDepthHigh.md) |
 | `MarketDataStaleFeed` | warning | [MarketDataStaleFeed.md](./MarketDataStaleFeed.md) |
 | `ApiRateLimitRejectionsHigh` | warning | [ApiRateLimitRejectionsHigh.md](./ApiRateLimitRejectionsHigh.md) |
