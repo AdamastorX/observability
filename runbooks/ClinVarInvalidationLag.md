@@ -6,8 +6,8 @@ Source rule: `platform/argocd/apps/prometheus.yaml`
 ## What fired
 
 ```
-increase(clinvar_ingestion_jobs_total{job="clinvar-service", status="succeeded"}[1h])
-  > increase(spring_kafka_listener_seconds_count{job="api", messaging_source_name="clinvar.ingestion.completed", error="none"}[1h])
+sum(increase(clinvar_ingestion_jobs_total{job="clinvar-service", status="succeeded"}[1h]))
+  > (sum(increase(spring_kafka_listener_seconds_count{job="api", messaging_source_name="clinvar.ingestion.completed", error="none"}[1h])) or vector(0))
 ```
 
 `for: 15m`, `severity: critical`.
@@ -90,7 +90,7 @@ clinical-safety framing, not a performance nicety (ADR 0018). Either:
 1. Re-query live Prometheus directly:
    ```
    curl -s 'http://localhost:9090/api/v1/query' --data-urlencode \
-     'query=increase(clinvar_ingestion_jobs_total{job="clinvar-service",status="succeeded"}[1h]) > increase(spring_kafka_listener_seconds_count{job="api",messaging_source_name="clinvar.ingestion.completed",error="none"}[1h])'
+     'query=sum(increase(clinvar_ingestion_jobs_total{job="clinvar-service",status="succeeded"}[1h])) > (sum(increase(spring_kafka_listener_seconds_count{job="api",messaging_source_name="clinvar.ingestion.completed",error="none"}[1h])) or vector(0))'
    ```
    Should return an empty result (the condition no longer true) once
    the two counts are back in step.
