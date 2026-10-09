@@ -111,16 +111,18 @@ jobs:
         run: python3 sre-agent/test_harness.py
 
   ci:
-    needs: [runbook-coverage, sre-agent-tests]
+    needs: [runbook-coverage, prometheus-rules, sre-agent-tests]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Check all jobs succeeded
         run: |
           if [ "${{ needs.runbook-coverage.result }}" != "success" ] \
+            || [ "${{ needs.prometheus-rules.result }}" != "success" ] \
             || [ "${{ needs.sre-agent-tests.result }}" != "success" ]; then
             echo "One or more jobs failed:"
             echo "  runbook-coverage: ${{ needs.runbook-coverage.result }}"
+            echo "  prometheus-rules: ${{ needs.prometheus-rules.result }}"
             echo "  sre-agent-tests: ${{ needs.sre-agent-tests.result }}"
             exit 1
           fi
