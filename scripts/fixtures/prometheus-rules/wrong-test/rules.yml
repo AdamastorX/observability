@@ -1,0 +1,15 @@
+# backlog #143/#144 self-test fixture: a valid rule paired with a
+# deliberately wrong test assertion in test.yml (this file itself
+# never fires under the series that test feeds it) -- `promtool test
+# rules` must fail on that mismatch before the real test suite is
+# trusted.
+groups:
+  - name: wrong-test-fixture
+    rules:
+      - alert: AlwaysHealthy
+        expr: up{job="healthy-job"} == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "should never fire in this fixture"

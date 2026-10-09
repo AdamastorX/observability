@@ -6,3 +6,8 @@
 .claude/ralph-loop.local.md
 __pycache__/
 *.pyc
+
+# backlog #143/#144: scripts/check-prometheus-rules.sh extracts the
+# real alerting_rules.yml content from platform's prometheus.yaml here
+# at CI/local-run time -- generated, not a source file.
+tests/rules-under-test.yml

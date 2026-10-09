@@ -1,0 +1,14 @@
+# backlog #143/#144 self-test fixture: deliberately invalid PromQL
+# (an unclosed paren) -- `promtool check rules` must fail on this
+# before the real check-prometheus-rules.sh is trusted against the
+# real platform/argocd/apps/prometheus.yaml content.
+groups:
+  - name: broken
+    rules:
+      - alert: BrokenRule
+        expr: sum(rate(foo[5m didn't close paren
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "broken"

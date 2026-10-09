@@ -1,0 +1,72 @@
+# backlog #143/#144: promtool unit tests for the real alert rules in
+# platform/argocd/apps/prometheus.yaml (extracted at CI time by
+# scripts/check-prometheus-rules.sh into rules-under-test.yml, next to
+# this file -- generated, not committed). No live Prometheus involved:
+# these are synthetic time series fed straight into the real rule
+# expressions.
+#
+# Covers two rules whose logic has a recency/scope *boundary* worth
+# proving, not just a syntax check: a case inside the boundary that
+# must fire, and a case outside it (evaluated in the same test, so an
+# unexpected extra alert on the wrong series would fail the assertion
+# too) that must stay silent.
+rule_files:
+  - rules-under-test.yml
+evaluation_interval: 1m
+
+tests:
+  - interval: 1m
+    name: "ContainerCrashLoopOrOOMKilled: the OOM arm fires only within the 15m restart-recency window (backlog #143)"
+    input_series:
+      # A pod that OOMed and restarted 2 real minutes before this test
+      # evaluates -- well inside the 15m increase() window and past
+      # the rule's own `for: 2m` -- must fire.
+      - series: 'kube_pod_container_status_last_terminated_exitcode{namespace="test", pod="recent-oom-pod", container="app"}'
+        values: '137 137 137 137 137 137 137 137 137 137 137 137 137 137 137 137 137 137 137 137 137'
+      - series: 'kube_pod_container_status_restarts_total{namespace="test", pod="recent-oom-pod", container="app"}'
+        values: '5 5 5 5 5 5 5 5 5 5 6 6 6 6 6 6 6 6 6 6 6'
+      # A pod holding the exact same stale exitcode==137 gauge
+      # (it OOMed once, long ago, and never restarted again) --
+      # the real #143 bug this gate exists to fix: without the
+      # restart-recency AND, this would page forever.
+      - series: 'kube_pod_container_status_last_terminated_exitcode{namespace="test", pod="stale-oom-pod", container="app"}'
+        values: '137 137 137 137 137 137 137 137 137 137 137 137 137 137 137 137 137 137 137 137 137'
+      - series: 'kube_pod_container_status_restarts_total{namespace="test", pod="stale-oom-pod", container="app"}'
+        values: '3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3'
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: ContainerCrashLoopOrOOMKilled
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              namespace: test
+              pod: recent-oom-pod
+              container: app
+            exp_annotations:
+              summary: "test/recent-oom-pod is in CrashLoopBackOff or was OOM-killed"
+              description: "test/recent-oom-pod (app) is either stuck in CrashLoopBackOff right now, or restarted within the last 15m and its container's last termination was a real OOM kill (exit code 137) -- checked directly via the exit code, not the reason string, since this cluster's kubelet reports OOM kills as the generic reason \"Error\", not \"OOMKilled\" (confirmed live against mimir's own known chronic OOM, backlog #135). The 15m recency gate (backlog #143) stops a stale exit-code-137 gauge from paging forever after the pod recovered -- check `kubectl get pod recent-oom-pod -n test` for the real current restart count/age before assuming this is an active, ongoing problem. Check `kubectl describe pod recent-oom-pod -n test` and real memory usage (`container_memory_working_set_bytes`) against the container's own limit before assuming this is new. See observability/runbooks/ContainerCrashLoopOrOOMKilled.md."
+
+  - interval: 1m
+    name: "TelemetryBackendDown: fires on a real down backend, stays silent for a healthy one and for Mimir, out of scope by design (backlog #144)"
+    input_series:
+      # Down for the full 5m+ `for` window -- must fire.
+      - series: 'up{job="loki"}'
+        values: '0 0 0 0 0 0 0 0 0 0 0'
+      # Healthy the whole time -- must stay silent.
+      - series: 'up{job="tempo"}'
+        values: '1 1 1 1 1 1 1 1 1 1 1'
+      # Down the whole time too, but Mimir is deliberately excluded
+      # from this alert's job=~ regex (backlog #135 is still open) --
+      # must stay silent even though its own `up` reads 0.
+      - series: 'up{job="mimir"}'
+        values: '0 0 0 0 0 0 0 0 0 0 0'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: TelemetryBackendDown
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              job: loki
+            exp_annotations:
+              summary: "loki (telemetry backend) has not been scraped successfully for 5m"
+              description: "up{job=\"loki\"} has read 0 for 5m -- Prometheus can no longer reach this telemetry backend's own /metrics endpoint. Check `kubectl get pods -n loki` first. Scoped to Loki/Tempo/Pyroscope only (backlog #144/ADR 0044 -- Mimir's own remote-write-failure arm is deliberately deferred pending backlog #135's still-open decommission decision). See observability/runbooks/TelemetryBackendDown.md."
