@@ -12,6 +12,7 @@ on:
 
 env:
   YQ_VERSION: v4.44.3
+  PROMTOOL_VERSION: v3.13.1
 
 jobs:
   runbook-coverage:
@@ -44,6 +45,51 @@ jobs:
 
       - name: Check the real runbook coverage
         run: bash observability/scripts/check-runbook-coverage.sh platform observability/runbooks observability/runbooks/README.md
+
+  # backlog #143/#144 (ADR 0046): promtool check rules validates PromQL
+  # syntax render-time, no live Prometheus needed; promtool test rules
+  # unit-tests alert *logic* against synthetic series. Three real
+  # defects of exactly this class (#91, #145, #143's own staleness
+  # gate) shipped before this existed.
+  prometheus-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: observability
+
+      - uses: actions/checkout@v7
+        with:
+          repository: AdamastorX/platform
+          path: platform
+
+      - name: Install yq ${{ env.YQ_VERSION }}
+        run: |
+          curl -sSL "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64" \
+            -o /usr/local/bin/yq
+          chmod +x /usr/local/bin/yq
+
+      - name: Install promtool ${{ env.PROMTOOL_VERSION }}
+        run: |
+          curl -sSL "https://github.com/prometheus/prometheus/releases/download/${PROMTOOL_VERSION}/prometheus-${PROMTOOL_VERSION#v}.linux-amd64.tar.gz" \
+            | tar xz -C /usr/local/bin --strip-components=1 "prometheus-${PROMTOOL_VERSION#v}.linux-amd64/promtool"
+
+      - name: Self-test -- check rules must fail on deliberately invalid PromQL
+        run: |
+          if promtool check rules observability/scripts/fixtures/prometheus-rules/broken-syntax/rules.yml; then
+            echo "::error::checker did not fail on the deliberately-broken-syntax fixture"
+            exit 1
+          fi
+
+      - name: Self-test -- test rules must fail on a deliberately wrong expectation
+        run: |
+          if promtool test rules observability/scripts/fixtures/prometheus-rules/wrong-test/test.yml; then
+            echo "::error::checker did not fail on the deliberately-wrong-test fixture"
+            exit 1
+          fi
+
+      - name: Check and test the real alerting rules
+        run: bash observability/scripts/check-prometheus-rules.sh platform observability/tests/rules-under-test.yml observability/tests/alerting_rules_test.yml
 
   # backlog #66/ADR 0039: no network call, no API key needed -- proves
   # every bundle is well-formed and that reference_answer (the real

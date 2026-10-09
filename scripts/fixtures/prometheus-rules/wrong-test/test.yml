@@ -1,0 +1,16 @@
+rule_files:
+  - rules.yml
+evaluation_interval: 1m
+tests:
+  - interval: 1m
+    name: "deliberately wrong expectation -- up=1 the whole time should never fire AlwaysHealthy, but this test wrongly asserts that it does"
+    input_series:
+      - series: 'up{job="healthy-job"}'
+        values: '1 1 1 1'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: AlwaysHealthy
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              job: healthy-job
