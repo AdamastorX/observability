@@ -100,23 +100,27 @@ Golden Signals dashboards stay as the drill-down.
 
 Rules every SLO dashboard follows:
 
-1. **Status first.** A row of big tiles at the top, one per SLO, coloured
-   background: green inside the target, amber close to it, red breached,
-   **grey for no traffic or no data**. Never green for "nothing to measure".
-2. **At most 8 panels** visible without scrolling at 1920x1080: a short
-   text header, up to four tiles, up to three trends below.
-3. **Plain language.** Titles read as a question or a result ("Requests
-   succeeding"), not a metric name; units are explicit; each panel has a
-   description that names the target and the alert it mirrors.
+1. **One overview, every SLO visible.** The `SLO Overview` dashboard shows
+   every SLO ADR 0020 defines as one tile, grouped by section (ClinVar
+   lookup, market-data pipeline, platform), with three counters on top:
+   meeting target, breached, no data. Nobody should have to open several
+   dashboards to count the SLOs.
+2. **Status first.** Each tile has a coloured background and a small
+   sparkline inside it: green inside the target, amber close to it, red
+   breached, **grey for no traffic or no data**. Never green for "nothing
+   to measure". No empty or decorative panels.
+3. **Plain language.** Titles read as a result ("API requests succeeding"),
+   not a metric name; units are explicit; each tile's description names the
+   target and the alert it mirrors.
 4. **The same expression as the alert.** A tile uses the alert's own
    ratio and window (5 minutes). A dashboard that disagrees with its alert is
    a bug. Where no alert exists (for example api's p95, which today is only
-   the canary's `api-slo-check` threshold), the description says so.
-5. **Honest windows.** Tiles show the current state and trends the last
-   6 hours. No error-budget or 28/30-day figure until #94's retention window
-   has closed; Prometheus keeps 3 days and Mimir about 6.
-6. **A link to the detail.** Each dashboard links to the matching Golden
+   the canary's `api-slo-check` threshold) the description says the
+   threshold is preliminary.
+5. **Honest windows.** Tiles show the current state. No error-budget or
+   28/30-day figure until #94's retention window has closed; Prometheus
+   keeps 3 days and Mimir about 6.
+6. **A link to the detail.** Clicking a tile opens the matching Golden
    Signals dashboard.
 
-Reference implementation: `SLO: api` (#177). #178 (ClinVar path), #179
-(market-data pipeline) and #180 (infrastructure) reuse its helpers.
+Adding an SLO means adding one entry to `SLOS` in the generator.
