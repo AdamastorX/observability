@@ -70,3 +70,26 @@ tests:
             exp_annotations:
               summary: "loki (telemetry backend) has not been scraped successfully for 5m"
               description: "up{job=\"loki\"} has read 0 for 5m -- Prometheus can no longer reach this telemetry backend's own /metrics endpoint. Check `kubectl get pods -n loki` first. Scoped to Loki/Tempo/Pyroscope only (backlog #144/ADR 0044 -- Mimir's own remote-write-failure arm is deliberately deferred pending backlog #135's still-open decommission decision). See observability/runbooks/TelemetryBackendDown.md."
+
+  - interval: 1m
+    name: "SLOErrorBudgetExhausted: fires only for an SLO whose budget stays below 0 for 1h (backlog #181)"
+    input_series:
+      # Exhausted for the whole test: must fire once past the rule's `for: 1h`.
+      - series: 'slo:error_budget_remaining:ratio7d{slo="news-polls"}'
+        values: '-0.1x80'
+      # Healthy SLO next to it: must stay silent (an unexpected extra alert fails the assertion).
+      - series: 'slo:error_budget_remaining:ratio7d{slo="api-availability"}'
+        values: '0.9x80'
+    alert_rule_test:
+      - eval_time: 30m
+        alertname: SLOErrorBudgetExhausted
+        exp_alerts: []
+      - eval_time: 70m
+        alertname: SLOErrorBudgetExhausted
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              slo: news-polls
+            exp_annotations:
+              summary: "SLO news-polls has exhausted its 7d error budget"
+              description: "Over the last 7 days news-polls is below its objective (error budget remaining -10%). See the SLOs dashboard and observability/runbooks/SLOErrorBudgetExhausted.md."
