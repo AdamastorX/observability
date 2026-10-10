@@ -1,0 +1,45 @@
+# backlog #177: promtool unit tests for the SLO recording rules in
+# platform/argocd/apps/prometheus.yaml (extracted at CI time into
+# recording-rules-under-test.yml, generated, not committed).
+#
+# Two cases that matter: a breach (compliance under the objective gives a
+# negative error budget) and the minimum-events guard (too few events gives
+# NO compliance series, shown as "insufficient events", never a ratio).
+rule_files:
+  - recording-rules-under-test.yml
+evaluation_interval: 5m
+
+tests:
+  - interval: 1h
+    name: "api-availability: 1% errors against a 99.5% objective is a breach (budget below 0)"
+    input_series:
+      - series: 'http_server_requests_seconds_count{job="api", uri="/work-items", outcome="SUCCESS"}'
+        values: '0+1000x200'
+      - series: 'http_server_requests_seconds_count{job="api", uri="/work-items", outcome="SERVER_ERROR"}'
+        values: '0+10x200'
+    promql_expr_test:
+      - expr: 'round(slo:compliance:ratio7d{slo="api-availability"}, 0.0001)'
+        eval_time: 190h
+        exp_samples:
+          - labels: '{slo="api-availability"}'
+            value: 0.9901
+      - expr: 'round(slo:error_budget_remaining:ratio7d{slo="api-availability"}, 0.0001)'
+        eval_time: 190h
+        exp_samples:
+          - labels: '{slo="api-availability"}'
+            value: -0.9802
+
+  - interval: 1h
+    name: "sentiment-scoring: about 10 events in the window is below 10/(1-objective), so no compliance series"
+    input_series:
+      - series: 'sentiment_analyzer_articles_consumed_total{job="sentiment-analyzer"}'
+        values: '0+0.05x200'
+    promql_expr_test:
+      - expr: 'slo:compliance:ratio7d{slo="sentiment-scoring"}'
+        eval_time: 190h
+        exp_samples: []
+      - expr: 'round(slo:valid:increase7d{slo="sentiment-scoring"}, 0.1)'
+        eval_time: 190h
+        exp_samples:
+          - labels: '{slo="sentiment-scoring", service="sentiment-analyzer"}'
+            value: 8.4
