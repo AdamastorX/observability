@@ -47,3 +47,19 @@ promtool check rules "$EXTRACTED"
 
 echo "== promtool test rules (alert logic, against synthetic series) =="
 promtool test rules "$TEST_FILE"
+
+# backlog #177 (M20): the SLO recording rules (serverFiles["recording_rules.yml"])
+# get the same two checks. Optional 4th argument: their unit-test file.
+RECORDING_TEST="${4:-}"
+if [ -n "$RECORDING_TEST" ]; then
+  RECORDING="$(dirname "$EXTRACTED")/recording-rules-under-test.yml"
+  yq eval '.spec.source.helm.valuesObject.serverFiles["recording_rules.yml"]' "$PROM_APP" > "$RECORDING"
+  if [ ! -s "$RECORDING" ] || [ "$(cat "$RECORDING")" = "null" ]; then
+    echo "::error::extracted no recording_rules.yml content from $PROM_APP" >&2
+    exit 1
+  fi
+  echo "== promtool check rules (SLO recording rules) =="
+  promtool check rules "$RECORDING"
+  echo "== promtool test rules (SLO compliance, budget and the minimum-events guard) =="
+  promtool test rules "$RECORDING_TEST"
+fi

@@ -89,7 +89,7 @@ jobs:
           fi
 
       - name: Check and test the real alerting rules
-        run: bash observability/scripts/check-prometheus-rules.sh platform observability/tests/rules-under-test.yml observability/tests/alerting_rules_test.yml
+        run: bash observability/scripts/check-prometheus-rules.sh platform observability/tests/rules-under-test.yml observability/tests/alerting_rules_test.yml observability/tests/recording_rules_test.yml
 
   # backlog #66/ADR 0039: no network call, no API key needed -- proves
   # every bundle is well-formed and that reference_answer (the real
